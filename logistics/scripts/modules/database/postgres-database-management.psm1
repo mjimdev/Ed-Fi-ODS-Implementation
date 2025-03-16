@@ -99,6 +99,37 @@ function Invoke-PsqlCommand {
     & $psql $params
 }
 
+function Invoke-PgDumpFile {
+    Param (
+
+        [string] [Parameter(Mandatory = $true)] $serverName,
+
+        [string] [Parameter(Mandatory = $true)] $portNumber,
+
+        [string] $userName,
+
+        [string] [Parameter(Mandatory = $true)] $databaseName,
+
+        [string] [Parameter(Mandatory = $true)] $filePath
+    )
+
+    if (-not (Test-PostgreSQLBinariesInstalled)) { Install-PostgreSQLBinaries }
+
+    $params = @(
+        "--host", $serverName,
+        "--port", $portNumber,
+        "--no-password",
+        "--dbname", $databaseName,
+        "--verbose", $filePath
+    )
+
+    if ($userName) {  $params =(@("--username", $userName) + $params )}
+
+    $psql = Get-PGRestorePath
+    Write-Host -ForegroundColor Magenta "& $psql $params"
+    & $psql $params
+}
+
 function Invoke-PsqlFile {
     Param (
 
@@ -162,7 +193,18 @@ function Install-PostgreSQLTemplate {
     Test-Error
 
     Write-Host "Loading from backup: $backupFile..."
-    Invoke-PsqlFile @parameters -filePath $backupFile -databaseName $databaseName
+    $backupFileFormat = Get-Content $backupFile -First 1
+    switch -Wildcard ( $backupFileFormat )
+    {
+        '*PGDMP*'
+        {
+            Invoke-PgDumpFile @parameters -filePath $backupFile -databaseName $databaseName
+        }
+        default
+        {
+            Invoke-PsqlFile @parameters -filePath $backupFile -databaseName $databaseName
+        }
+    }
     Test-Error
 
     Write-Host "Done loading the $databaseName database."
