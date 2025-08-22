@@ -4,8 +4,9 @@
 # See the LICENSE and NOTICES files in the project root for more information.
 
 # Base image with additional packages
-FROM mcr.microsoft.com/dotnet/aspnet:6.0.25-alpine3.18@sha256:cac1969bbc14c18c8229e15f8b16286ad17f23aec28d1ec14f7fa1bd29947661 AS base
-RUN apk --no-cache add unzip=~6 dos2unix=~7 bash=~5 gettext=~0 icu=~73 curl=~8
+FROM mcr.microsoft.com/dotnet/aspnet:8.0.2-alpine3.19@sha256:95f27052830db1c7a00e55f098ebda507204757907919f506a468387f7d856a4 AS base
+RUN apk --no-cache add unzip=~6 dos2unix=~7 bash=~5 gettext=~0 icu=~74 curl=~8 && \
+    addgroup -S edfi && adduser -S edfi -G edfi
 
 # Start a new layer so that the above layer can be cached
 FROM base AS build
@@ -25,21 +26,24 @@ ENV ENCRYPT_CONNECTION=false
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 
 WORKDIR /app
-COPY appsettings.template.json /app/appsettings.template.json
-COPY run.sh /app/run.sh
+COPY --chmod=600 appsettings.template.json /app/appsettings.template.json
+COPY --chmod=500 run.sh /app/run.sh
 COPY log4net.config /app/log4net.txt
 
-RUN wget -q -O /app/WebApi.zip https://pkgs.dev.azure.com/ed-fi-alliance/Ed-Fi-Alliance-OSS/_apis/packaging/feeds/EdFi/nuget/packages/EdFi.Suite3.Ods.WebApi.Standard.${STANDARD_VERSION}/versions/${API_VERSION}/content && \
+RUN umask 0077 && \
+    wget -q -O /app/WebApi.zip https://pkgs.dev.azure.com/ed-fi-alliance/Ed-Fi-Alliance-OSS/_apis/packaging/feeds/EdFi/nuget/packages/EdFi.Suite3.Ods.WebApi.Standard.${STANDARD_VERSION}/versions/${API_VERSION}/content && \
     unzip /app/WebApi.zip -d /app && \
     rm -f /app/WebApi.zip && \
     cp /app/log4net.txt /app/log4net.config && \
+    rm -f /app/log4net.txt && \
     dos2unix /app/*.json && \
     dos2unix /app/*.sh && \
     dos2unix /app/log4net.config && \
-    chmod 700 /app/*.sh -- ** && \
     rm -f /app/*.exe && \
-    apk del unzip dos2unix
+    apk del unzip dos2unix curl && \
+    chown -R edfi /app
 
+ENV ASPNETCORE_HTTP_PORTS=80
 EXPOSE 80
-
+USER edfi
 ENTRYPOINT [ "/app/run.sh" ]

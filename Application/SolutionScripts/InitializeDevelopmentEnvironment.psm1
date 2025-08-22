@@ -88,6 +88,8 @@ function Initialize-DevelopmentEnvironment {
         Standard Version.
     .parameter ExtensionVersion
         Extension Version.
+	.parameter JavaPath
+        Path to the java executable (used for SDK generation).
     #>
     param(
         [ValidateSet('Sandbox', 'SingleTenant', 'MultiTenant')]
@@ -155,7 +157,10 @@ function Initialize-DevelopmentEnvironment {
 
         [Parameter(Mandatory=$false)]
         [ValidateSet('1.0.0', '1.1.0')]
-        [String] $ExtensionVersion = '1.1.0'
+        [String] $ExtensionVersion = '1.1.0',
+		
+		[Parameter(Mandatory=$false)]
+        [String] $JavaPath
     )
 
     if ((-not [string]::IsNullOrWhiteSpace($OdsTokens)) -and ($InstallType -ine 'SingleTenant') -and ($InstallType -ine 'MultiTenant')) {
@@ -236,7 +241,7 @@ function Initialize-DevelopmentEnvironment {
 
         if ($RunSmokeTest) { $script:result += Invoke-SmokeTests }
 
-        if ($RunSdkGen) { $script:result += Invoke-SdkGen $GenerateApiSdkPackage $GenerateTestSdkPackage $PackageVersion $NoRestore $StandardVersion }
+        if ($RunSdkGen) { $script:result += Invoke-SdkGen $GenerateApiSdkPackage $GenerateTestSdkPackage $PackageVersion $NoRestore $StandardVersion $JavaPath }
     }
 
     $script:result += New-TaskResult -name '-' -duration '-'
@@ -301,7 +306,8 @@ Function Invoke-RebuildSolution {
         [string] $verbosity = "minimal",
         [string] $solutionPath = (Get-RepositoryResolvedPath "Application/Ed-Fi-Ods.sln"),
         [Boolean] $noRestore = $false,
-        [String] $standardVersion = '5.0.0'
+        [ValidateSet('4.0.0', '5.0.0')]
+        [string]  $standardVersion
     )
     Invoke-Task -name $MyInvocation.MyCommand.Name -task {
         if ((Get-DeploymentSettings).Engine -eq 'PostgreSQL') { $buildConfiguration = 'Npgsql' }
@@ -416,8 +422,10 @@ function Invoke-CodeGen {
         [String] $Engine,
         [string[]] $ExtensionPaths,
         [String] $RepositoryRoot,
-        [String] $StandardVersion = '5.0.0',
-        [String] $ExtensionVersion = '1.1.0'
+        [ValidateSet('4.0.0', '5.0.0')]
+        [string]  $StandardVersion,
+        [ValidateSet('1.0.0', '1.1.0')]
+        [string]  $ExtensionVersion
     )
 
     Install-CodeGenUtility
@@ -527,10 +535,12 @@ function Invoke-SdkGen {
         [Boolean] $GenerateTestSdkPackage,
         [string] $PackageVersion,
         [Boolean] $NoRestore,
-        [String] $StandardVersion
+        [ValidateSet('4.0.0', '5.0.0')]
+        [String] $StandardVersion,
+		[String] $JavaPath
     )
     Invoke-Task -name $MyInvocation.MyCommand.Name -task {
-        & $(Get-RepositoryResolvedPath "logistics/scripts/Invoke-SdkGen.ps1") -generateApiSdkPackage $GenerateApiSdkPackage -generateTestSdkPackage $GenerateTestSdkPackage -packageVersion $PackageVersion -noRestore $NoRestore -standardVersion $StandardVersion
+        & $(Get-RepositoryResolvedPath "logistics/scripts/Invoke-SdkGen.ps1") -generateApiSdkPackage $GenerateApiSdkPackage -generateTestSdkPackage $GenerateTestSdkPackage -packageVersion $PackageVersion -noRestore $NoRestore -standardVersion $StandardVersion -javaPath $JavaPath
     }
 }
 
@@ -570,6 +580,7 @@ function New-DatabasesPackage {
 
         [string] $OutputDirectory,
 
+        [ValidateSet('4.0.0', '5.0.0')]
         [string] $StandardVersion
 
     )
