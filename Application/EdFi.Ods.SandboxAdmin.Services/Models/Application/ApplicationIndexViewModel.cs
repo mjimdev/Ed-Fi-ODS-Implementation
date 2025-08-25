@@ -17,7 +17,5 @@ namespace EdFi.Ods.SandboxAdmin.Services.Models.Application
 
         public int VendorId { get; set; }
 
-        public bool IsDefaultVendor { get; set; }
-
     }
 }

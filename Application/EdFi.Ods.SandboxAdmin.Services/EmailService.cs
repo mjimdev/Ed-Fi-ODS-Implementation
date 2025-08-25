@@ -3,6 +3,8 @@
 // The Ed-Fi Alliance licenses this file to you under the Apache License, Version 2.0.
 // See the LICENSE and NOTICES files in the project root for more information.
 
+using System;
+using System.IO;
 using System.Net;
 using System.Net.Mail;
 using System.Text;
@@ -29,14 +31,15 @@ namespace EdFi.Ods.SandboxAdmin.Services
             var messageBuilder = new StringBuilder();
 
             messageBuilder.AppendLine(
-                $"An account has been created for email address '{emailAddress}' in Sandbox Admin.");
+                @"An account has been created for email address '" + emailAddress +
+                "' in Sandbox Admin.");
 
             messageBuilder.AppendLine();
             messageBuilder.AppendLine(@"Please follow this link to set your password:");
             messageBuilder.AppendLine();
             messageBuilder.AppendLine(_routeService.GetRouteForActivation(emailAddress, secret));
 
-            var body = messageBuilder.ToString();
+            var body = string.Format(messageBuilder.ToString(), secret);
 
             var message = new MailMessage
             {
@@ -59,7 +62,7 @@ namespace EdFi.Ods.SandboxAdmin.Services
             messageBuilder.AppendLine(@"In order to reset your password, please follow this link:");
             messageBuilder.AppendLine(_routeService.GetRouteForPasswordReset(emailAddress, secret));
 
-            var body = messageBuilder.ToString();
+            var body = string.Format(messageBuilder.ToString(), secret);
 
             var message = new MailMessage
             {
@@ -104,7 +107,7 @@ namespace EdFi.Ods.SandboxAdmin.Services
                 typeof(SmtpDeliveryMethod), _configuration.GetValue<string>("MailSettings:Smtp:DeliveryMethod"), true,
                 out object deliveryMethod))
             {
-                smtpClient.DeliveryMethod = (SmtpDeliveryMethod) deliveryMethod;
+                smtpClient.DeliveryMethod = (SmtpDeliveryMethod)deliveryMethod;
             }
 
             if (!enableSsl.IsDefaultValue() && smtpClient.DeliveryMethod == SmtpDeliveryMethod.Network)

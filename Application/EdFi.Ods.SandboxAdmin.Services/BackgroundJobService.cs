@@ -28,14 +28,14 @@ namespace EdFi.Ods.Sandbox.Admin.Services
         {
             StdSchedulerFactory factory = new StdSchedulerFactory();
             IScheduler scheduler = await factory.GetScheduler();
-            
+
             await scheduler.Start();
-            
+
             await CreateAndScheduleNewJob<CreateIdentityRolesJob>("createIdentityRoles", "setupAdminDatabase");
             await CreateAndScheduleNewJob<CreateIdentityUsersJob>("createIdentityUsers", "setupAdminDatabase");
-            
+
             await CreateAndScheduleNewJob<CreateSandboxesJob>("createSandboxes", "setupAdminDatabase");
-            
+
             foreach (var user in _users)
             {
                 // refresh existing sandboxes periodically
@@ -45,7 +45,7 @@ namespace EdFi.Ods.Sandbox.Admin.Services
                     await CreateAndScheduleNewJob<RebuildSandboxesJob>($"refreshSandboxes-{user.Value.Email}", "setupAdminDatabase", "0 */24 * * * ?");
                 }
             }
-            
+
             async Task<IJobDetail> CreateAndScheduleNewJob<T>(string idName, string idGroup, string cronExpression = null)
                 where T : IJob
             {
@@ -53,7 +53,7 @@ namespace EdFi.Ods.Sandbox.Admin.Services
                 newJob.JobDataMap.Put("engine", _engine);
                 newJob.JobDataMap.Put("exitAfterSandboxCreation", exitAfterSandboxCreation);
                 ITrigger newTrigger;
-            
+
                 // If no cron expression is provided, then use a simple schedule that runs once
                 if (string.IsNullOrEmpty(cronExpression))
                 {
@@ -103,7 +103,7 @@ namespace EdFi.Ods.Sandbox.Admin.Services
     {
         public Task Execute(IJobExecutionContext context)
         {
-            ((IInitializationEngine)context.MergedJobDataMap["engine"]).RebuildSandboxes();
+            ((IInitializationEngine)context.MergedJobDataMap["engine"]).CreateSandboxes();
             return Task.CompletedTask;
         }
     }

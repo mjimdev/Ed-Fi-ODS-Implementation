@@ -14,6 +14,7 @@ using log4net;
 using Microsoft.Extensions.Configuration;
 using EdFi.Ods.SandboxAdmin.Services;
 using EdFi.Ods.Sandbox.Provisioners;
+using static System.Net.Mime.MediaTypeNames;
 namespace EdFi.Ods.Sandbox.Admin.Services
 {
     public class ClientCreator : IClientCreator
@@ -60,17 +61,17 @@ namespace EdFi.Ods.Sandbox.Admin.Services
             return Int32.Parse(configValue);
         }
 
-        public ApiClient CreateNewSandboxClient(string sandboxName, SandboxOptions sandboxOptions, User user, int? applicationId = null, bool addRestoredEdOrgIdsToApplication = true)
+        public ApiClient CreateNewSandboxClient(string sandboxName, SandboxOptions sandboxOptions, User user, int? applicationId = null)
         {
             if (user.ApiClients.Count >= _maximumSandboxesPerUser)
             {
-                var message = $"The maximum of {_maximumSandboxesPerUser} sandboxes for user {user.FullName} has been reached!";
+                var message = $"The maximum of {_maximumSandboxesPerUser} sandboxes for user id {user.UserId} has been reached!";
                 message += " To configure please update the 'MaximumSandboxesPerUser' app setting in the web.config.";
                 _log.Error(message);
                 throw new ArgumentOutOfRangeException(message);
             }
 
-            var apiClient = ResetSandboxClient(sandboxName, sandboxOptions, user, applicationId, addRestoredEdOrgIdsToApplication);
+            var apiClient = ResetSandboxClient(sandboxName, sandboxOptions, user, applicationId);
 
             var connectionStringBuilder = _dbConnectionStringBuilderAdapterFactory.Get();
 
@@ -90,21 +91,17 @@ namespace EdFi.Ods.Sandbox.Admin.Services
             return apiClient;
         }
 
-        public ApiClient ResetSandboxClient(string sandboxName, SandboxOptions sandboxOptions, User user, int? applicationId = null, bool addRestoredEdOrgIdsToApplication = true)
+        public ApiClient ResetSandboxClient(string sandboxName, SandboxOptions sandboxOptions, User user, int? applicationId = null)
         {
             var client = SetupDefaultSandboxClient(sandboxName, sandboxOptions, user, applicationId);
 
             ProvisionSandbox(client);
 
-            if (addRestoredEdOrgIdsToApplication)
-            {
-                var edOrgIds = _templateDatabaseLeaQuery.GetLocalEducationAgencyIds(client.Key)
-                    .Concat(_templateDatabaseLeaQuery.GetCommunityProviderIds(client.Key))
-                    .Distinct()
-                    .ToList();
-
-                _defaultApplicationCreator.AddEdOrgIdsToApplication(edOrgIds, client.Application.ApplicationId);
-            }
+            var edOrgIds = _templateDatabaseLeaQuery.GetLocalEducationAgencyIds(client.Key)
+                .Concat(_templateDatabaseLeaQuery.GetCommunityProviderIds(client.Key))
+                .Distinct()
+                .ToList();
+            _defaultApplicationCreator.AddEdOrgIdsToApplication(edOrgIds, client.Application.ApplicationId);
 
             return client;
         }
