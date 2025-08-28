@@ -49,6 +49,9 @@ jobs:
       uses: nuget/setup-nuget@b2bc17b761a1d88cab755a776c7922eb26eefbfa # v1
       with:
         nuget-version: '5.x'
+    - name: Install Mono and Nuget
+      working-directory: ./Ed-Fi-ODS-Implementation/.github/workflows
+      run: sudo ./install-mono.sh
     - name: Pack Release version
       working-directory: ./Ed-Fi-ODS-Implementation
       shell: pwsh
